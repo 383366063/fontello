@@ -109,7 +109,7 @@
         //- Standard mode - `Download` button
         button.btn.btn-info.disabled(
           data-on-click='build_font',
-          data-bind='css: {disabled: !selectedCount()}')
+          data-bind='css: { disabled: !selectedCount() }')
           i.icon-download(data-bind='visible: !building()')
           i.icon-load.animate-spin(style='display:none', data-bind='visible: building()')
           |  
@@ -122,7 +122,7 @@
         //- API mode, without URL - `Save session` button
         button.btn.btn-info.disabled(
           data-on-click='api.update',
-          data-bind='css: {disabled: !selectedCount()}')
+          data-bind='css: { disabled: !selectedCount() }')
           i.icon-download(data-bind='visible: !saving()')
           i.icon-load.animate-spin(style='display:none', data-bind='visible: saving()')
           |  

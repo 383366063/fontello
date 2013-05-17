@@ -168,9 +168,11 @@ N.wire.on('session_load', function () {
     N.app.encoding('pua'); // legacy fallback
   }
 
+  N.app.freeze();
+
   // reset selection prior to set glyph data
   // not nesessary now, since we load session only on start
-  _.each(N.app.fontsList.selectedGlyphs(), function (glyph) { glyph.selected(false); });
+  _.each(N.app.selectedGlyphs(), function (glyph) { glyph.selected(false); });
 
   // load glyphs states
   _.each(session.fonts, function (sessionFont, name) {
@@ -196,6 +198,8 @@ N.wire.on('session_load', function () {
       targetGlyph.name(glyph.css || targetGlyph.originalName);
     });
   });
+
+  N.app.unfreeze();
 });
 
 

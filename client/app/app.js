@@ -13,6 +13,27 @@ var namesTracker   = require('./_names_tracker');
 var DEFAULT_GLYPH_SIZE = 16;
 
 
+// Create global `model` and properties
+N.app = {};
+
+N.app.selectedGlyphs = ko.observableArray([]);
+
+N.app.selectedCount = ko.computed(function () {
+  return N.app.selectedGlyphs().length;
+}).extend({ throttle: 200 });
+
+var frozen = ko.observable(true);
+
+N.app.freeze = function() {
+  frozen(true);
+  N.app.selectedGlyphs.valueWillMutate();
+};
+N.app.unfreeze = function() {
+  N.app.selectedGlyphs.valueHasMutated();
+  frozen(false);
+  N.wire.emit('session_save');
+};
+
 // Int to char, with fix for big numbers
 // see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/fromCharCode
 //
@@ -52,6 +73,7 @@ function fixedCharCodeAt(chr) {
 
 
 function GlyphModel(font, data) {
+  var self = this;
 
   // Read-only properties
   //
@@ -81,9 +103,34 @@ function GlyphModel(font, data) {
   this.name     = ko.observable(this.originalName);
   this.code     = ko.observable(this.originalCode);
 
-  this.selected.subscribe(function () {
-    N.wire.emit('session_save');
-  });
+  // Track selected list & autosave
+  var _selected       = ko.observable(false);
+  var _selected_cache = false;
+
+  this.selected = ko.computed({
+    read: function() {
+      /*if (!frozen()) {
+        _selected = _selected_cache;
+      }*/
+      return _selected();
+    },
+    write: function(value) {
+      _selected_cache = value;
+      //_selected = value;
+      _selected(value)
+
+      if (value) {
+        N.app.selectedGlyphs().push(this);
+      } else {
+        var idx = N.app.selectedGlyphs().indexOf(self);
+        if (idx >= 0) { N.app.selectedGlyphs().splice(idx, 1); }
+      }
+
+      if (!frozen()) {
+        N.app.unfreeze();
+      }
+    }
+  }, this);
 
   this.name.subscribe(function () {
     N.wire.emit('session_save');
@@ -98,12 +145,12 @@ function GlyphModel(font, data) {
   //
   this.serialize = function () {
     return {
-      uid:  this.uid
-    , css:  this.name()
-    , code: this.code()
-    , src:  this.font.fontname
+      uid:  self.uid
+    , css:  self.name()
+    , code: self.code()
+    , src:  self.font.fontname
     };
-  }.bind(this);
+  };
 
   //
   // Helpers
@@ -126,27 +173,27 @@ function GlyphModel(font, data) {
   //
   this.customChar = ko.computed({
     read: function () {
-      return fixedFromCharCode(this.code());
+      return fixedFromCharCode(self.code());
     }
   , write: function (value) {
-      this.code(fixedCharCodeAt(value));
+      self.code(fixedCharCodeAt(value));
     }
-  , owner: this
+  , owner: self
   });
 
   // code value as hex-string (for code editor)
   //
   this.customHex = ko.computed({
     read: function () {
-      var code = this.code().toString(16).toUpperCase();
+      var code = self.code().toString(16).toUpperCase();
       return "0000".substr(0, Math.max(4 - code.length, 0)) + code;
     }
   , write: function (value) {
       // value must be HEX string - omit invalid chars
       value = 0 + value.replace(/[^0-9a-fA-F]+/g, '');
-      this.code(parseInt(value, 16));
+      self.code(parseInt(value, 16));
     }
-  , owner: this
+  , owner: self
   });
 
   // Whenever or not glyph should be treaten as "modified"
@@ -168,7 +215,7 @@ function GlyphModel(font, data) {
 
 
 function FontModel(data) {
-
+  var self = this;
   //
   // Essential properties
   //
@@ -224,17 +271,11 @@ function FontModel(data) {
     return new GlyphModel(this, data);
   }, this);
 
-  // Array of selected glyphs of a font
-  //
-  this.selectedGlyphs = ko.computed(function () {
-    return _.filter(this.glyphs, function (glyph) { return glyph.selected(); });
-  }, this).extend({ throttle: 100 });
-
   // selected glyphs count
   //
   this.selectedCount = ko.computed(function () {
-    return this.selectedGlyphs().length;
-  }, this);
+    return _.reduce(N.app.selectedGlyphs(), function (cnt, glyph) { return cnt + (glyph.font.fontname === self.fontname ? 1 : 0); }, 0);
+  }, this).extend({ throttle: 500 });
 
   // Visible glyphs count
   //
@@ -255,20 +296,6 @@ function FontsList() {
   this.fontsByName = {};
   _.each(this.fonts, function (font) { this.fontsByName[font.fontname] = font; }, this);
 
-  // Array of selected glyphs from all fonts
-  //
-  this.selectedGlyphs = ko.computed(function () {
-    return _.reduce(this.fonts, function (result, font) {
-      return result.concat(font.selectedGlyphs());
-    }, []);
-  }, this).extend({ throttle: 100 });
-
-  // Count of selected glyphs from all fonts
-  //
-  this.selectedCount = ko.computed(function () {
-    return this.selectedGlyphs().length;
-  }, this);
-
   // Count of visible fonts, with reflow compensation
   //
   this.visibleCount = ko.computed(function () {
@@ -279,9 +306,6 @@ function FontsList() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-
-// Create global `model` and properties
-N.app = {};
 
 N.app.searchWord    = ko.observable('').extend({ throttle: 100 });
 N.app.searchMode    = ko.computed(function () { return N.app.searchWord().length > 0; });
@@ -374,13 +398,15 @@ N.wire.once('navigate.done', function () {
   //
 
   N.wire.on('cmd:reset_selected', function () {
+    N.app.freeze();    
     _.each(N.app.fontsList.selectedGlyphs(), function (glyph) {
       glyph.selected(false);
     });
+    N.app.unfreeze();
   });
 
   N.wire.on('cmd:reset_all', function (src) {
-
+    N.app.freeze();
     // is `src` set, then event was produced
     // by link click and we need confirmation
     if (src) {
@@ -388,7 +414,10 @@ N.wire.once('navigate.done', function () {
         return;
       }
     }
+    N.app.selectedGlyphs([]);
+    N.app.unfreeze();
 
+    N.app.freeze();
     N.app.fontName('');
     //N.app.fontSize(N.runtime.config.glyph_size.val);
     N.app.cssPrefixText('icon-');
@@ -401,6 +430,7 @@ N.wire.once('navigate.done', function () {
         glyph.name(glyph.originalName);
       });
     });
+    N.app.unfreeze();
   });
 
   N.wire.on('cmd:set_encoding_pua', function () {

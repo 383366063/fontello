@@ -7,7 +7,7 @@ var ko = require('knockout');
 
 function NamesEditorModel() {
 
-  this.selectedGlyphs = N.app.fontsList.selectedGlyphs;
+  this.selectedGlyphs = N.app.selectedGlyphs;
   this.fontSize       = N.app.fontSize;
   this.cssPrefixText  = N.app.cssPrefixText;
   this.cssUseSuffix   = N.app.cssUseSuffix;

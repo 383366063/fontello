@@ -23,8 +23,10 @@ function import_config(str, file) {
     N.app.cssPrefixText(String(config.css_prefix_text || 'icon-'));
     N.app.cssUseSuffix(config.css_use_suffix === true);
 
+    N.app.freeze();
+
     // reset selection prior to set glyph data
-    _.each(N.app.fontsList.selectedGlyphs(), function (glyph) { glyph.selected(false); });
+    _.each(N.app.selectedGlyphs(), function (glyph) { glyph.selected(false); });
 
     // create map to lookup glyphs by id
     var glyphById = {};
@@ -46,6 +48,9 @@ function import_config(str, file) {
       glyph.code(g.code || glyph.orig_code || glyph.originalCode);
       glyph.name(g.css || glyph.orig_css || glyph.originalName);
     });
+
+    N.app.unfreeze();
+
   } catch (e) {
     N.wire.emit('notify', t('error.bad_config_format', { name: file.name }));
   }

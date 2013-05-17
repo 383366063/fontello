@@ -37,9 +37,13 @@ N.wire.once('navigate.done', function () {
         return;
       }
 
+      N.app.freeze();
+
       $els.each(function () {
         ko.dataFor(this).toggleSelection();
       });
+
+      N.app.unfreeze();
 
       $('#selector').removeClass('multicursor');
     }

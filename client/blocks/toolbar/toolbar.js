@@ -54,8 +54,7 @@ function ToolbarModel() {
   // Proxy to global properties
   //
 
-  this.selectedGlyphs = N.app.fontsList.selectedGlyphs;
-  this.selectedCount  = N.app.fontsList.selectedCount;
+  this.selectedCount  = N.app.selectedCount;
   this.searchWord     = N.app.searchWord;
   this.searchMode     = N.app.searchMode;
   this.fontName       = N.app.fontName;

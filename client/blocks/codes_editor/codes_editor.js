@@ -5,7 +5,7 @@ var ko = require('knockout');
 
 
 function CodesEditorModel() {
-  this.selectedGlyphs = N.app.fontsList.selectedGlyphs;
+  this.selectedGlyphs = N.app.selectedGlyphs.extend({ throttle: 200 });
 
   this.hideGlyph = function (glyph) {
     $(glyph).fadeOut(function () {

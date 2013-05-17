@@ -12,7 +12,7 @@ N.wire.once('navigate.done', { priority: 10 }, function () {
   //
 
   ko.applyBindings(
-    { selectedCount: N.app.fontsList.selectedCount },
+    { selectedCount: N.app.selectedCount },
     $view.get(0)
   );
 
@@ -31,7 +31,7 @@ N.wire.once('navigate.done', { priority: 10 }, function () {
   // Jump to selector if no selected glyphs left
   //
 
-  N.app.fontsList.selectedCount.subscribe(function (count) {
+  N.app.selectedCount.subscribe(function (count) {
     if (0 === count) {
       jumpToSelector();
     }
