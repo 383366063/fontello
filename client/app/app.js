@@ -117,7 +117,7 @@ function GlyphModel(font, data) {
     write: function(value) {
       _selected_cache = value;
       //_selected = value;
-      _selected(value)
+      _selected(value);
 
       if (value) {
         N.app.selectedGlyphs().push(this);
@@ -398,7 +398,7 @@ N.wire.once('navigate.done', function () {
   //
 
   N.wire.on('cmd:reset_selected', function () {
-    N.app.freeze();    
+    N.app.freeze();
     _.each(N.app.fontsList.selectedGlyphs(), function (glyph) {
       glyph.selected(false);
     });
